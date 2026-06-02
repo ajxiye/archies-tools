@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>archie's songwriting suite</title>
+    <style>
+        /* 
+         * GOOGLE GEMINI THEME / MASTER SUITE
+         */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
+        :root {
+            --bg-base: #000000;
+            --bg-sidebar: #0d0e12;
+            --bg-card: #131314;
+            --bg-elevated: #1e1f22;
+            --text-primary: #e3e3e3;
+            --text-secondary: #8e918f;
+            --accent-glow: #a8c7fa;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --font-stack: 'Google Sans', 'Inter', -apple-system, sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+
+        body {
+            background-color: var(--bg-base); color: var(--text-primary); font-family: var(--font-stack);
+            height: 100vh; display: flex; overflow: hidden;
+            background-image: radial-gradient(circle at 50% 0%, rgba(168, 199, 250, 0.05) 0%, transparent 70%);
+        }
+
+        /* --- SIDEBAR NAVIGATION --- */
+        nav.sidebar {
+            width: 260px; background: var(--bg-sidebar); border-right: 1px solid var(--border-color);
+            display: flex; flex-direction: column; padding: 1.5rem 1rem; z-index: 20;
+        }
+        .brand { font-size: 1.2rem; font-weight: 500; margin-bottom: 2.5rem; padding-left: 0.5rem; background: linear-gradient(90deg, #e3e3e3, #a8c7fa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        .nav-item {
+            display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border-radius: 12px;
+            color: var(--text-secondary); cursor: pointer; transition: all 0.2s; font-weight: 500; font-size: 0.95rem; margin-bottom: 0.5rem;
+        }
+        .nav-item:hover { background: rgba(255,255,255,0.05); color: var(--text-primary); }
+        .nav-item.active { background: rgba(168, 199, 250, 0.1); color: var(--accent-glow); }
+        .nav-item svg { width: 18px; height: 18px; fill: currentColor; }
+
+        /* --- MAIN CONTENT AREA --- */
+        main { flex: 1; position: relative; overflow-y: auto; overflow-x: hidden; }
+        
+        .tool-view {
+            position: absolute; top: 0; left: 0; width: 100%; min-height: 100%; padding: 3rem 2rem;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+        }
+        .tool-view.active { opacity: 1; pointer-events: all; position: relative; }
+
+        /* --- SHARED COMPONENTS --- */
+        .card {
+            background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 24px; padding: 2rem;
+            width: 100%; max-width: 1000px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); margin-bottom: 2rem;
+        }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; }
+        .card-header h2 { font-size: 1.2rem; font-weight: 500; }
+        .card-header p { font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem;}
+        
+        .controls-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-top: 1.5rem; }
+        .control-group { display: flex; align-items: center; gap: 1.5rem; }
+        .control-stack { display: flex; flex-direction: column; gap: 0.5rem; }
+        .control-stack label { font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; }
+        
+        .btn {
+            background: transparent; color: var(--text-primary); border: 1px solid var(--border-color); padding: 0.6rem 1.2rem;
+            border-radius: 50px; font-family: var(--font-stack); font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center; gap: 0.5rem; outline: none;
+        }
+        .btn:hover { background: rgba(255, 255, 255, 0.05); box-shadow: 0 0 15px var(--accent-glow); }
+        .btn-primary { background: var(--text-primary); color: var(--bg-base); border: none; font-weight: 600;}
+        .btn-primary:hover { background: #fff; box-shadow: 0 0 20px rgba(255,255,255,0.2); }
+
+        select, input[type=range] {
+            background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--border-color);
+            padding: 0.5rem; border-radius: 8px; font-family: var(--font-stack); cursor: pointer; outline: none;
+        }
+        input[type=range] { -webkit-appearance: none; height: 4px; border: none; padding: 0; background: var(--border-color); margin-top: 8px;}
+        input[type=range]::-webkit-slider-thumb { height: 16px; width: 16px; border-radius: 50%; background: var(--accent-glow); cursor: pointer; -webkit-appearance: none; margin-top: -6px; }
+
+        /* --- TOOL SPECIFIC STYLES --- */
+        /* Rhythm Canvas */
+        .click-canvas { width: 100%; height: 250px; background: var(--bg-elevated); border-radius: 12px; cursor: pointer; border: 1px solid var(--border-color); transition: transform 0.1s;}
+        .click-canvas:active { transform: scale(0.99); }
+        .hint-text { text-align: center; font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.75rem;}
+
+        /* Fretboard */
+        .fretboard-wrapper { background: #18191c; border-radius: 8px; border: 1px solid var(--border-color); overflow-x: auto; padding: 10px 0; margin-top: 1rem;}
+        .string-row { display: flex; height: 38px; position: relative; }
+        .fret { flex: 1; min-width: 50px; border-right: 2px solid #2a2b2f; position: relative; display: flex; align-items: center; justify-content: center; }
+        .fret.nut { border-right: 6px solid #444; min-width: 40px; background: rgba(255,255,255,0.02); }
+        .string-line { position: absolute; left: 0; right: 0; background: #666; z-index: 1; }
+        .inlay-dot { position: absolute; width: 14px; height: 14px; border-radius: 50%; background: #333; z-index: 0; top: 100%; left: 50%; transform: translate(-50%, -50%); }
+        .inlay-dot.double-top { top: 10px; transform: translateX(-50%); }
+        .inlay-dot.double-bottom { top: auto; bottom: 10px; transform: translateX(-50%); }
+        .note-dot { z-index: 2; width: 26px; height: 26px; border-radius: 50%; background: var(--bg-base); border: 2px solid var(--accent-glow); color: var(--text-primary); font-size: 0.7rem; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+        .note-dot.root-note { border-color: #ff7b72; background: #4a1c1a; }
+
+        /* Poly-Meter Engine */
+        .poly-canvas { width: 100%; height: 350px; background: var(--bg-elevated); border-radius: 12px; border: 1px solid var(--border-color); }
+
+        /* Progressions */
+        .progression-display { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1.5rem; justify-content: center; }
+        .chord-card { background: var(--bg-elevated); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; text-align: center; flex: 1; min-width: 120px; }
+        .chord-roman { font-size: 1.5rem; font-weight: 600; color: var(--accent-glow); margin-bottom: 0.5rem; }
+        .chord-name { font-size: 1rem; color: var(--text-primary); }
+
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR -->
+    <nav class="sidebar">
+        <div class="brand">archie's tools</div>
+        
+        <div class="nav-item active" data-target="generator">
+            <span>⏱️</span> Breakdown Generator
+        </div>
+        <div class="nav-item" data-target="poly">
+            <span>🌀</span> Poly-Meter Engine
+        </div>
+        <div class="nav-item" data-target="fretboard">
+            <span>🎼</span> Theory Fretboard
+        </div>
+        <div class="nav-item" data-target="progression">
+            <span>🎹</span> Chord Architect
+        </div>
+    </nav>
+
+    <!-- MAIN VIEWS -->
+    <main>
+        
+        <!-- 1. BREAKDOWN GENERATOR (Formerly Sight-Reader) -->
+        <section id="generator" class="tool-view active">
+            <div class="card">
+                <div class="card-header">
+                    <div><h2>Breakdown Generator</h2><p>Click the staff to instantly generate flawless mathematical rhythm figures.</p></div>
+                </div>
+                <canvas id="rhythmCanvas" class="click-canvas"></canvas>
+                <div class="hint-text">Click the canvas to generate a new rhythm pattern</div>
+                
+                <div class="controls-row">
+                    <button class="btn btn-primary play-btn" data-tool="generator">Play Rhythm</button>
+                    <div class="control-group">
+                        <div class="control-stack">
+                            <label class="tempo-label">Tempo: 90 BPM</label>
+                            <input type="range" class="tempo-slider" min="40" max="200" value="90">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. POLY-METER ENGINE -->
+        <section id="poly" class="tool-view">
+            <div class="card">
+                <div class="card-header">
+                    <div><h2>Poly-Meter Engine</h2><p>Visualize and hear complex contrasting time signatures.</p></div>
+                </div>
+                
+                <canvas id="polyCanvas" class="poly-canvas"></canvas>
+                
+                <div class="controls-row">
+                    <button class="btn btn-primary play-btn" data-tool="poly">Play Poly-Meter</button>
+                    <div class="control-group">
+                        <div class="control-stack">
+                            <label class="tempo-label">Tempo: 100 BPM</label>
+                            <input type="range" class="tempo-slider" min="40" max="200" value="100">
+                        </div>
+                        <div class="control-stack">
+                            <label>Outer Track</label>
+                            <select id="poly1Select">
+                                <option value="3">3</option>
+                                <option value="4" selected>4</option>
+                                <option value="5">5</option>
+                                <option value="7">7</option>
+                            </select>
+                        </div>
+                        <div class="control-stack">
+                            <label>Inner Track</label>
+                            <select id="poly2Select">
+                                <option value="3" selected>3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                                <option value="7">7</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. FRETBOARD -->
+        <section id="fretboard" class="tool-view">
+            <div class="card">
+                <div class="card-header">
+                    <div><h2>Theory Fretboard</h2><p>Scale visualization dynamically mapped to your tuning.</p></div>
+                    <div class="control-group">
+                        <select id="tuningSelect"><option value="Drop C" selected>Drop C</option><option value="Drop B">Drop B</option><option value="Drop A">Drop A</option></select>
+                        <select id="scaleSelect"><option value="Phrygian Dominant" selected>Phrygian Dominant</option><option value="Harmonic Minor">Harmonic Minor</option><option value="Aeolian">Natural Minor</option></select>
+                    </div>
+                </div>
+                <div class="fretboard-wrapper" id="fretboardGrid"></div>
+            </div>
+        </section>
+
+        <!-- 4. PROGRESSIONS -->
+        <section id="progression" class="tool-view">
+            <div class="card">
+                <div class="card-header">
+                    <div><h2>Chord Architect</h2><p>Generates massive metalcore chord progressions using Roman Numeral theory.</p></div>
+                    <button class="btn btn-primary" id="genProgBtn">Generate Chords</button>
+                </div>
+                <div class="progression-display" id="progDisplay"></div>
+            </div>
+        </section>
+        
+    </main>
+
+    <script>
+        /**
+         * 🧠 MASTER STATE & NAVIGATION
+         */
+        let activeTool = 'generator';
+        let globalTempo = 90;
+        
+        // Navigation Logic
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                // Stop any audio playing globally
+                stopGlobalAudio();
+
+                // UI Reset
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                document.querySelectorAll('.tool-view').forEach(v => v.classList.remove('active'));
+                
+                // Activate New
+                item.classList.add('active');
+                activeTool = item.getAttribute('data-target');
+                document.getElementById(activeTool).classList.add('active');
+                
+                // Trigger Resize events for canvases to re-paint correctly
+                window.dispatchEvent(new Event('resize'));
+            });
+        });
+
+        // Global Tempo Sync
+        document.querySelectorAll('.tempo-slider').forEach(slider => {
+            slider.addEventListener('input', (e) => {
+                globalTempo = parseInt(e.target.value, 10);
+                document.querySelectorAll('.tempo-slider').forEach(s => s.value = globalTempo);
+                document.querySelectorAll('.tempo-label').forEach(l => l.innerText = `Tempo: ${globalTempo} BPM`);
+                if (audioState.isPlaying) { stopGlobalAudio(); togglePlay(activeTool); } // Restart seamlessly
+            });
+        });
+
+
+        /**
+         * 🎧 UNIFIED WEB AUDIO SYNTHESIZER
+         */
+        let audioCtx;
+        let masterGain;
+        const audioState = { isPlaying: false, startTime: 0, nextTime: 0, currentIdx: 0, timerID: null };
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                masterGain = audioCtx.createGain(); masterGain.gain.value = 0.8; masterGain.connect(audioCtx.destination);
+            }
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playSynth(time, type) {
+            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(masterGain);
+            
+            if (type === 'click-high') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(1200, time); osc.frequency.exponentialRampToValueAtTime(100, time + 0.05);
+                gain.gain.setValueAtTime(0, time); gain.gain.linearRampToValueAtTime(0.8, time + 0.002); gain.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+                osc.start(time); osc.stop(time + 0.05);
+            } else if (type === 'click-low') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(600, time); osc.frequency.exponentialRampToValueAtTime(100, time + 0.05);
+                gain.gain.setValueAtTime(0, time); gain.gain.linearRampToValueAtTime(0.5, time + 0.002); gain.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+                osc.start(time); osc.stop(time + 0.05);
+            } else if (type === 'kick') {
+                osc.frequency.setValueAtTime(120, time); osc.frequency.exponentialRampToValueAtTime(40, time + 0.1);
+                gain.gain.setValueAtTime(1, time); gain.gain.exponentialRampToValueAtTime(0.001, time + 0.2);
+                osc.start(time); osc.stop(time + 0.2);
+            }
+        }
+
+        // Global Playback Controller
+        function stopGlobalAudio() {
+            audioState.isPlaying = false;
+            clearTimeout(audioState.timerID);
+            
+            document.querySelectorAll('.play-btn').forEach(btn => {
+                let text = btn.getAttribute('data-tool') === 'generator' ? 'Play Rhythm' : 'Play Poly-Meter';
+                btn.innerText = text;
+            });
+            
+            // Force one last frame render to clear glowing playheads
+            drawRhythm(); drawPoly(); 
+        }
+
+        function togglePlay(tool) {
+            if (audioState.isPlaying) { stopGlobalAudio(); return; }
+            initAudio();
+            audioState.isPlaying = true;
+            document.querySelectorAll('.play-btn').forEach(btn => btn.innerText = `Stop`);
+            
+            audioState.startTime = audioCtx.currentTime + 0.05;
+            audioState.nextTime = audioState.startTime;
+            
+            if (tool === 'generator') { 
+                audioState.currentIdx = 0;
+                scheduleRhythm(); 
+                drawRhythm(); 
+            }
+            if (tool === 'poly') { 
+                p1Time = audioState.startTime; p2Time = audioState.startTime; 
+                p1Count = 0; p2Count = 0;
+                schedulePoly(); 
+                drawPoly(); 
+            }
+        }
+
+        document.querySelectorAll('.play-btn').forEach(btn => {
+            btn.addEventListener('click', () => togglePlay(btn.getAttribute('data-tool')));
+        });
+
+
+        /**
+         * 🛠️ TOOL 1: BREAKDOWN GENERATOR
+         */
+        const rhythmCtx = document.getElementById('rhythmCanvas').getContext('2d');
+        const R_FIGURES = {
+            'q': [{ dur: 1, type: 'n' }], 'qr': [{ dur: 1, type: 'r' }],
+            'e8': [{ dur: 0.5, type: 'n' }, { dur: 0.5, type: 'n' }],
+            's16': [{ dur: 0.25, type: 'n' }, { dur: 0.25, type: 'n' }, { dur: 0.25, type: 'n' }, { dur: 0.25, type: 'n' }]
+        };
+        let rhythmSeq = []; let rhythmFlat = [];
+        
+        function genRhythm() {
+            const pool = ['q', 'qr', 'e8', 's16'];
+            rhythmSeq = []; rhythmFlat = [];
+            let timeOff = 0;
+            for (let m = 0; m < 2; m++) {
+                let measure = [];
+                for (let b = 0; b < 4; b++) {
+                    const fig = pool[Math.floor(Math.random() * pool.length)];
+                    measure.push({ key: fig, hits: R_FIGURES[fig] });
+                    R_FIGURES[fig].forEach((h, i) => {
+                        if (h.type === 'n') rhythmFlat.push({ offset: timeOff, accent: b === 0 && i === 0 });
+                        timeOff += h.dur; // in beats
+                    });
+                }
+                rhythmSeq.push(measure);
+            }
+            drawRhythm();
+        }
+
+        function scheduleRhythm() {
+            const lookahead = 0.1; const spb = 60.0 / globalTempo;
+            while (audioState.nextTime < audioCtx.currentTime + lookahead && audioState.isPlaying) {
+                if (rhythmFlat.length > 0) {
+                    const hit = rhythmFlat[audioState.currentIdx];
+                    playSynth(audioState.nextTime, hit.accent ? 'click-high' : 'click-low');
+                    
+                    audioState.currentIdx++;
+                    if (audioState.currentIdx >= rhythmFlat.length) {
+                        audioState.currentIdx = 0;
+                        audioState.nextTime += ((8 - hit.offset) * spb); // 8 beats total (2 bars of 4)
+                    } else {
+                        audioState.nextTime += ((rhythmFlat[audioState.currentIdx].offset - hit.offset) * spb);
+                    }
+                } else {
+                    audioState.nextTime += 8 * spb;
+                }
+            }
+            if (audioState.isPlaying) { 
+                audioState.timerID = setTimeout(scheduleRhythm, 25); 
+            }
+        }
+
+        function drawRhythm() {
+            const cvs = document.getElementById('rhythmCanvas');
+            const cw = cvs.width; const ch = cvs.height; const cy = ch/2; const pad = 40;
+            rhythmCtx.clearRect(0, 0, cw, ch);
+            
+            // Draw Staff
+            rhythmCtx.beginPath(); rhythmCtx.moveTo(pad, cy); rhythmCtx.lineTo(cw-pad, cy); 
+            rhythmCtx.strokeStyle='rgba(255,255,255,0.1)'; rhythmCtx.lineWidth=2; rhythmCtx.stroke();
+            
+            // Draw Barlines
+            const mw = (cw-(pad*2))/2;
+            [0,1,2].forEach(m => { 
+                rhythmCtx.beginPath(); rhythmCtx.moveTo(pad+m*mw, cy-25); rhythmCtx.lineTo(pad+m*mw, cy+25); 
+                rhythmCtx.strokeStyle = m===1 ? 'rgba(255,255,255,0.3)' : '#e3e3e3'; rhythmCtx.lineWidth=2; rhythmCtx.stroke(); 
+            });
+
+            if (!rhythmSeq.length) return;
+            rhythmCtx.fillStyle='#e3e3e3'; rhythmCtx.strokeStyle='#e3e3e3';
+            
+            // Render Math-perfect Notes & Beams
+            for (let m=0; m<2; m++) {
+                const bw = mw/4;
+                for (let b=0; b<4; b++) {
+                    const key = rhythmSeq[m][b].key; const bx = pad+(m*mw)+(b*bw); const dx = bx+(bw*0.1); const as = bw*0.8;
+                    
+                    if(key==='qr') { 
+                        rhythmCtx.font='24px serif'; rhythmCtx.fillText('𝄽', dx+as/2-8, cy+8); 
+                    } else if(key==='q') { 
+                        rhythmCtx.beginPath(); rhythmCtx.ellipse(dx+as/2, cy, 6.5, 5, -Math.PI/8, 0, 2*Math.PI); rhythmCtx.fill(); 
+                        rhythmCtx.beginPath(); rhythmCtx.moveTo(dx+as/2+5,cy); rhythmCtx.lineTo(dx+as/2+5,cy-35); rhythmCtx.lineWidth=2; rhythmCtx.stroke(); 
+                    } else if(key==='e8') {
+                        const n1=dx+as*0.25; const n2=dx+as*0.75;
+                        rhythmCtx.beginPath(); rhythmCtx.ellipse(n1, cy, 6.5, 5, -Math.PI/8, 0, 2*Math.PI); rhythmCtx.ellipse(n2, cy, 6.5, 5, -Math.PI/8, 0, 2*Math.PI); rhythmCtx.fill();
+                        rhythmCtx.beginPath(); rhythmCtx.moveTo(n1+5,cy); rhythmCtx.lineTo(n1+5,cy-35); rhythmCtx.moveTo(n2+5,cy); rhythmCtx.lineTo(n2+5,cy-35); rhythmCtx.stroke();
+                        rhythmCtx.beginPath(); rhythmCtx.moveTo(n1+4,cy-35); rhythmCtx.lineTo(n2+6,cy-35); rhythmCtx.lineWidth=4; rhythmCtx.stroke();
+                    } else if (key==='s16') {
+                        const xs=[dx+as*0.1, dx+as*0.35, dx+as*0.6, dx+as*0.85];
+                        xs.forEach(nx => { rhythmCtx.beginPath(); rhythmCtx.ellipse(nx, cy, 6.5, 5, -Math.PI/8, 0, 2*Math.PI); rhythmCtx.fill(); rhythmCtx.beginPath(); rhythmCtx.moveTo(nx+5,cy); rhythmCtx.lineTo(nx+5,cy-35); rhythmCtx.lineWidth=2; rhythmCtx.stroke(); });
+                        rhythmCtx.beginPath(); rhythmCtx.moveTo(xs[0]+4,cy-35); rhythmCtx.lineTo(xs[3]+6,cy-35); rhythmCtx.moveTo(xs[0]+4,cy-28); rhythmCtx.lineTo(xs[3]+6,cy-28); rhythmCtx.lineWidth=4; rhythmCtx.stroke();
+                    }
+                }
+            }
+
+            // Smooth Playhead Engine
+            if (audioState.isPlaying && audioCtx && activeTool === 'generator') {
+                const now = audioCtx.currentTime;
+                const spb = 60.0 / globalTempo;
+                const totalDur = spb * 8; // 8 beats total
+                
+                const elapsed = Math.max(0, now - audioState.startTime);
+                const loopTime = elapsed % totalDur;
+                const progress = loopTime / totalDur;
+                
+                const playheadX = pad + (progress * (cw - pad * 2));
+
+                rhythmCtx.beginPath(); rhythmCtx.moveTo(playheadX, cy - 45); rhythmCtx.lineTo(playheadX, cy + 45);
+                rhythmCtx.strokeStyle = '#a8c7fa'; rhythmCtx.lineWidth = 2; rhythmCtx.shadowBlur = 15; rhythmCtx.shadowColor = '#a8c7fa';
+                rhythmCtx.stroke(); rhythmCtx.shadowBlur = 0;
+                
+                requestAnimationFrame(drawRhythm);
+            }
+        }
+        document.getElementById('rhythmCanvas').addEventListener('click', () => { genRhythm(); if(!audioState.isPlaying) drawRhythm(); });
+
+
+        /**
+         * 🛠️ TOOL 2: POLY-METER ENGINE (Fully Restored Visualization)
+         */
+        const polyCtx = document.getElementById('polyCanvas').getContext('2d');
+        let poly1 = 4; let poly2 = 3;
+        let p1Time = 0; let p2Time = 0;
+        let p1Count = 0; let p2Count = 0;
+        
+        function schedulePoly() {
+            const spb = 60.0 / globalTempo;
+            const loopDur = poly1 * spb;
+            const p2Step = loopDur / poly2;
+            
+            // Outer Ring audio scheduler
+            while (p1Time < audioCtx.currentTime + 0.1 && audioState.isPlaying) {
+                const isDown = p1Count % poly1 === 0;
+                playSynth(p1Time, isDown ? 'click-high' : 'click-low');
+                p1Time += spb; p1Count++;
+            }
+            
+            // Inner Ring audio scheduler
+            while (p2Time < audioCtx.currentTime + 0.1 && audioState.isPlaying) {
+                playSynth(p2Time, 'kick'); // Heavy kick to distinguish inner meter
+                p2Time += p2Step; p2Count++;
+            }
+            
+            if (audioState.isPlaying) { 
+                audioState.timerID = setTimeout(schedulePoly, 25); 
+            }
+        }
+
+        // Dropdown hooks
+        document.getElementById('poly1Select').addEventListener('change', (e) => { poly1 = parseInt(e.target.value); drawPoly(); });
+        document.getElementById('poly2Select').addEventListener('change', (e) => { poly2 = parseInt(e.target.value); drawPoly(); });
+
+        function drawPoly() {
+            const cvs = document.getElementById('polyCanvas'); 
+            const cw = cvs.width; const ch = cvs.height; 
+            const cx = cw/2; const cy = ch/2;
+            
+            // Calculate orbital radii dynamically to screen size
+            const r1 = 120; // Outer track
+            const r2 = 70;  // Inner track
+            
+            polyCtx.clearRect(0,0,cw,ch);
+            
+            // Draw structural tracks
+            polyCtx.strokeStyle = 'rgba(255,255,255,0.1)'; polyCtx.lineWidth = 2;
+            polyCtx.beginPath(); polyCtx.arc(cx, cy, r1, 0, Math.PI*2); polyCtx.stroke(); 
+            polyCtx.beginPath(); polyCtx.arc(cx, cy, r2, 0, Math.PI*2); polyCtx.stroke(); 
+
+            // Draw fixed nodes (Outer)
+            for(let i = 0; i < poly1; i++) {
+                const ang = (i/poly1 * Math.PI*2) - Math.PI/2;
+                polyCtx.fillStyle = 'rgba(168,199,250,0.4)'; 
+                polyCtx.beginPath(); polyCtx.arc(cx + Math.cos(ang)*r1, cy + Math.sin(ang)*r1, 5, 0, Math.PI*2); polyCtx.fill();
+            }
+            
+            // Draw fixed nodes (Inner)
+            for(let i = 0; i < poly2; i++) {
+                const ang = (i/poly2 * Math.PI*2) - Math.PI/2;
+                polyCtx.fillStyle = 'rgba(255,123,114,0.4)'; 
+                polyCtx.beginPath(); polyCtx.arc(cx + Math.cos(ang)*r2, cy + Math.sin(ang)*r2, 5, 0, Math.PI*2); polyCtx.fill();
+            }
+
+            // Draw active animation
+            if(audioState.isPlaying && audioCtx && activeTool === 'poly') {
+                const now = audioCtx.currentTime;
+                const spb = 60.0 / globalTempo; 
+                const loopDur = poly1 * spb;
+                
+                const elapsed = Math.max(0, now - audioState.startTime);
+                const progress = (elapsed % loopDur) / loopDur; // Maps to exactly 1 full rotation
+                
+                const angle = (progress * Math.PI * 2) - Math.PI/2;
+
+                // Node 1 (Outer - Gemini Blue)
+                polyCtx.fillStyle = '#a8c7fa'; 
+                polyCtx.beginPath(); polyCtx.arc(cx + Math.cos(angle)*r1, cy + Math.sin(angle)*r1, 10, 0, Math.PI*2); polyCtx.fill();
+                
+                // Node 2 (Inner - Brutal Red)
+                polyCtx.fillStyle = '#ff7b72'; 
+                polyCtx.beginPath(); polyCtx.arc(cx + Math.cos(angle)*r2, cy + Math.sin(angle)*r2, 10, 0, Math.PI*2); polyCtx.fill();
+                
+                requestAnimationFrame(drawPoly);
+                
+            } else if (!audioState.isPlaying) {
+                // Standby Text
+                polyCtx.fillStyle = 'rgba(255,255,255,0.4)'; polyCtx.textAlign = 'center'; polyCtx.font = '14px sans-serif';
+                polyCtx.fillText("Press play to visualize math", cx, cy);
+            }
+        }
+
+
+        /**
+         * 🛠️ TOOL 3: FRETBOARD
+         */
+        const nNames = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+        const tunings = { "Drop C": [0,7,0,5,9,2], "Drop B": [11,6,11,4,8,1], "Drop A": [9,4,9,2,6,11] };
+        const scales = { "Phrygian Dominant": [0,1,4,5,7,8,10], "Harmonic Minor": [0,2,3,5,7,8,11], "Aeolian": [0,2,3,5,7,8,10] };
+
+        function drawFb() {
+            const grid = document.getElementById('fretboardGrid'); grid.innerHTML = '';
+            const root = tunings[document.getElementById('tuningSelect').value][0]; 
+            const act = scales[document.getElementById('scaleSelect').value].map(i => (root+i)%12);
+
+            for (let str = 5; str >= 0; str--) {
+                const base = tunings[document.getElementById('tuningSelect').value][str];
+                const rEl = document.createElement('div'); rEl.className = 'string-row';
+                for (let fret = 0; fret <= 15; fret++) {
+                    const note = (base + fret) % 12;
+                    const fEl = document.createElement('div'); fEl.className = fret === 0 ? 'fret nut' : 'fret';
+                    
+                    const w = document.createElement('div'); w.className = 'string-line'; w.style.height = `${((5-str)*0.5)+1}px`; fEl.appendChild(w);
+                    if (str === 2 && [3,5,7,9,15].includes(fret)) { const d = document.createElement('div'); d.className = 'inlay-dot'; fEl.appendChild(d); }
+                    if (fret === 12 && str === 2) { const d1=document.createElement('div'); d1.className='inlay-dot double-top'; const d2=document.createElement('div'); d2.className='inlay-dot double-bottom'; fEl.appendChild(d1); fEl.appendChild(d2); }
+                    
+                    if (act.includes(note)) {
+                        const nd = document.createElement('div'); nd.className = note === root ? 'note-dot root-note' : 'note-dot'; nd.innerText = nNames[note]; fEl.appendChild(nd);
+                    }
+                    rEl.appendChild(fEl);
+                }
+                grid.appendChild(rEl);
+            }
+        }
+        document.getElementById('tuningSelect').addEventListener('change', drawFb); document.getElementById('scaleSelect').addEventListener('change', drawFb);
+
+
+        /**
+         * 🛠️ TOOL 4: CHORD ARCHITECT
+         */
+        function genProg() {
+            const root = tunings[document.getElementById('tuningSelect').value][0]; // Dynamic to current guitar tuning
+            const progs = [ [{r:'i',v:0},{r:'VI',v:8},{r:'III',v:3},{r:'VII',v:10}], [{r:'i',v:0},{r:'iv',v:5},{r:'VI',v:8},{r:'V',v:7}] ];
+            const p = progs[Math.floor(Math.random()*progs.length)];
+            
+            const disp = document.getElementById('progDisplay'); disp.innerHTML = '';
+            p.forEach(c => {
+                const note = nNames[(root + c.v) % 12]; const type = c.r === c.r.toLowerCase() ? 'Minor' : 'Major';
+                const card = document.createElement('div'); card.className = 'chord-card';
+                card.innerHTML = `<div class="chord-roman">${c.r}</div><div class="chord-name">${note} ${type}</div>`;
+                disp.appendChild(card);
+            });
+        }
+        document.getElementById('genProgBtn').addEventListener('click', genProg);
+
+        
+        /**
+         * 🚀 BOOT SEQUENCE
+         */
+        function resizeCanvases() {
+            const dpr = window.devicePixelRatio || 1;
+            ['rhythmCanvas', 'polyCanvas'].forEach(id => {
+                const cvs = document.getElementById(id); const rect = cvs.parentElement.getBoundingClientRect();
+                cvs.width = rect.width * dpr; cvs.height = cvs.clientHeight * dpr; cvs.getContext('2d').scale(dpr, dpr);
+            });
+            drawRhythm(); drawPoly();
+        }
+        window.addEventListener('resize', resizeCanvases);
+        
+        // Initial setup
+        genRhythm(); drawFb(); genProg();
+        setTimeout(resizeCanvases, 50); // Ensure proper DOM painting measurements
+
+    </script>
+</body>
+</html>
